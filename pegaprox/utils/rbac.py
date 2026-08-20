@@ -163,6 +163,11 @@ def get_role_permissions_for_user(user: dict, tenant_id: str = None) -> list:
         if role in tenant_roles:
             return tenant_roles[role].get('permissions', []).copy()
     
+    # Search all tenants for this role (matches get_user_clusters behavior)
+    for tid, roles in custom.get('tenants', {}).items():
+        if role in roles:
+            return roles[role].get('permissions', []).copy()
+    
     # global custom role
     global_roles = custom.get('global', {})
     if role in global_roles:

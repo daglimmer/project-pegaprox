@@ -484,7 +484,9 @@ def set_user_perms(username):
         # a tenant_permissions entry resolves to the target's EFFECTIVE GLOBAL perms because
         # has_permission() runs with no tenant_id (auth.py) and get_user_permissions falls back to
         # the target's own tenant. (The 'role' field was also previously stored unvalidated.)
-        if request.session.get('role') != ROLE_ADMIN and (
+        from pegaprox.utils.rbac import has_permission as _has_perm
+        _caller = request.session
+        if not _has_perm({'role': _caller.get('role', ''), 'permissions': _caller.get('permissions', [])}, 'admin.roles') and (
                 (role or '') == ROLE_ADMIN or any(str(p).startswith('admin.') for p in extra)):
             log_audit(request.session.get('user', ''), 'security.privilege_amplification_denied',
                       f"Denied tenant-admin granting admin-level role/perms to {username}")

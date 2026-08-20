@@ -51,9 +51,9 @@ def _caller_tenant_or_none():
     # MK Jun 2026 (sec-review): a global admin manages every tenant; a tenant-scoped admin
     # (custom role carrying admin.users) is confined to their own tenant. Returns the tenant
     # to scope to, or None when the caller is a global admin (no restriction).
-    if request.session.get('role') == ROLE_ADMIN:
-        return None
     caller = get_db().get_user(request.session.get('user', '')) or {}
+    if has_permission(caller, 'admin.tenants'):
+        return None
     return caller.get('tenant_id', DEFAULT_TENANT_ID)
 
 
@@ -85,10 +85,10 @@ def _caller_can_grant_role(target_role):
     # level, so a custom role carrying admin.* perms would pass _role_at_or_below_caller for a
     # user-tier delegate. Require a non-global-admin caller to actually hold every permission the
     # role grants before assigning it. Global admins keep full delegation.
-    if request.session.get('role') == ROLE_ADMIN:
-        return True
     from pegaprox.utils.auth import build_authz_user
     caller = build_authz_user(request.session.get('user', ''), request.session)
+    if has_permission(caller, 'admin.roles'):
+        return True
     return all(has_permission(caller, p) for p in _role_permissions(target_role))
 
 
@@ -97,10 +97,10 @@ def _caller_can_grant_perms(permissions):
     # template) must not grant it permissions the caller doesn't hold; otherwise an admin.roles
     # delegate could rewrite its own tenant role to admin.settings/admin.users and self-escalate to
     # global-admin-equivalent. Global admins keep full delegation.
-    if request.session.get('role') == ROLE_ADMIN:
-        return True
     from pegaprox.utils.auth import build_authz_user
     caller = build_authz_user(request.session.get('user', ''), request.session)
+    if has_permission(caller, 'admin.roles'):
+        return True
     return all(has_permission(caller, p) for p in (permissions or []))
 
 
@@ -111,11 +111,11 @@ def _caller_can_manage_user(target_user):
     # user direct admin.* grants, and a lesser delegate must not be able to reset such a peer and
     # inherit those grants. Global admins pass; otherwise the caller must hold every effective perm
     # the target has.
-    if request.session.get('role') == ROLE_ADMIN:
-        return True
     from pegaprox.utils.auth import build_authz_user
     from pegaprox.utils.rbac import get_user_permissions
     caller = build_authz_user(request.session.get('user', ''), request.session)
+    if has_permission(caller, 'admin.users'):
+        return True
     return all(has_permission(caller, p) for p in get_user_permissions(target_user or {}))
 
 
@@ -1122,9 +1122,10 @@ def get_tenants():
     # get user info from session
     username = request.session.get('user', '')
     user_role = request.session.get('role', ROLE_VIEWER)
+    caller_user = get_db().get_user(request.session.get('user', '')) or {}
     
     # admin always sees all tenants - no filtering
-    if user_role == ROLE_ADMIN:
+    if has_permission(caller_user, 'admin.tenants'):
         result = []
         for tid, t in tenants_db.items():
             result.append({
@@ -1355,7 +1356,7 @@ def list_all_roles():
     users = load_users()
     user = users.get(request.session['user'], {})
     user_tenant = user.get('tenant_id', DEFAULT_TENANT_ID)
-    is_admin = user.get('role') == ROLE_ADMIN
+    is_admin = has_permission(user, 'admin.roles')
     
     roles = []
     # builtins

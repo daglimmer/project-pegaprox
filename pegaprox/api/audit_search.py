@@ -31,7 +31,7 @@ def _safe_int(v, default, lo=None, hi=None):
 
 
 @bp.route('/api/audit/search', methods=['GET'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def search():
     args = request.args
     q = (args.get('q') or '').strip()[:200]
@@ -67,7 +67,7 @@ def search():
 
 
 @bp.route('/api/audit/facets', methods=['GET'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def facets():
     days = _safe_int(request.args.get('days', 7), 7, 1, 365)
     try:

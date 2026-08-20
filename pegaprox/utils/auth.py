@@ -915,10 +915,19 @@ def require_auth(roles: list = None, perms: list = None):
                 # since token creation, follow them down so the token can't outrank
                 # its owner. Won't auto-escalate.
                 _hier = {ROLE_ADMIN: 3, ROLE_USER: 2, ROLE_VIEWER: 1}
-                token_lvl = _hier.get(session.get('role'), 1)
-                user_lvl = _hier.get(user.get('role'), 1)
+                # Custom roles default to level 2 (user), matching
+                # create_api_token behavior at line 690. Was 1 (viewer).
+                token_lvl = _hier.get(session.get('role'), 2)
+                user_lvl = _hier.get(user.get('role'), 2)
                 eff_lvl = min(token_lvl, user_lvl)
-                fresh_role = next((r for r, lvl in _hier.items() if lvl == eff_lvl), ROLE_VIEWER)
+                # Compare token vs user level directly.
+                # If token claims higher privilege than user currently holds,
+                # floor to user's role (prevents downgrade bypass).
+                # Else preserve token's role name (custom roles for has_permission).
+                if token_lvl > user_lvl:
+                    fresh_role = user.get('role', ROLE_VIEWER)
+                else:
+                    fresh_role = session.get('role', ROLE_VIEWER)
                 # Don't mutate session['role'] — keep the original token-bound value
                 # in the session dict for audit/log purposes; fresh_role drives the
                 # role check below.

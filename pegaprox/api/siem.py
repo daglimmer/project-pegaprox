@@ -395,7 +395,7 @@ def start_worker():
 # ── Endpoints ─────────────────────────────────────────────────────────────
 
 @bp.route('/api/siem/targets', methods=['GET'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.scripts'])
 def list_targets():
     try:
         c = get_db().conn.cursor()
@@ -406,7 +406,7 @@ def list_targets():
 
 
 @bp.route('/api/siem/targets', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.scripts'])
 def create_target():
     body = request.get_json(silent=True) or {}
     name = (body.get('name') or '').strip()[:80]
@@ -436,7 +436,7 @@ def create_target():
 
 
 @bp.route('/api/siem/targets/<tid>', methods=['PUT'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.scripts'])
 def update_target(tid):
     body = request.get_json(silent=True) or {}
     fields = []
@@ -470,7 +470,7 @@ def update_target(tid):
 
 
 @bp.route('/api/siem/targets/<tid>', methods=['DELETE'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.scripts'])
 def delete_target(tid):
     try:
         c = get_db().conn.cursor()
@@ -484,7 +484,7 @@ def delete_target(tid):
 
 
 @bp.route('/api/siem/targets/<tid>/test', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.scripts'])
 def test_target(tid):
     """Fire a synthetic audit event to one specific target."""
     try:
@@ -512,7 +512,7 @@ def test_target(tid):
 
 
 @bp.route('/api/siem/types', methods=['GET'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.scripts'])
 def types():
     """List supported types so the UI dropdown stays in sync with the backend."""
     return jsonify({
