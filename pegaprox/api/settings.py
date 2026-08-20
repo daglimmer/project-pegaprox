@@ -2161,7 +2161,7 @@ def complete_acme_dns_challenge():
 
 @bp.route('/api/config/backup', methods=['POST'])
 
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.settings'])
 def backup_config():
     """Export full PegaProx configuration as encrypted backup (admin only)
     
@@ -2437,7 +2437,7 @@ def _decrypt_backup(encrypted_data: bytes, password: str) -> str:
         raise ValueError("Incorrect backup password or corrupted file")
 
 @bp.route('/api/config/restore', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.settings'])
 def restore_config():
     """Import PegaProx configuration from encrypted backup (admin only)
     

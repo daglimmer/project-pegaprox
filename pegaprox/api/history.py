@@ -35,7 +35,7 @@ def get_scheduled_tasks():
     return jsonify(config)
 
 @bp.route('/api/scheduled-tasks', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def create_scheduled_task():
     """Create a new scheduled task"""
     data = request.json or {}
@@ -68,7 +68,7 @@ def create_scheduled_task():
     return jsonify(new_task), 201
 
 @bp.route('/api/scheduled-tasks/<task_id>', methods=['PUT'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def update_scheduled_task(task_id):
     """Update a scheduled task"""
     data = request.json or {}
@@ -95,7 +95,7 @@ def update_scheduled_task(task_id):
     return jsonify({'error': 'Task not found'}), 404
 
 @bp.route('/api/scheduled-tasks/<task_id>', methods=['DELETE'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def delete_scheduled_task(task_id):
     """Delete a scheduled task"""
     config = load_scheduled_tasks()
@@ -108,7 +108,7 @@ def delete_scheduled_task(task_id):
     return jsonify({'success': True})
 
 @bp.route('/api/scheduled-tasks/<task_id>/run', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def run_scheduled_task_now(task_id):
     """Run a scheduled task immediately"""
     config = load_scheduled_tasks()
@@ -433,7 +433,7 @@ def get_affinity_rules(cluster_id=None):
 
 @bp.route('/api/affinity-rules', methods=['POST'])
 @bp.route('/api/clusters/<cluster_id>/affinity-rules', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def create_affinity_rule(cluster_id=None):
     """Create a new affinity rule"""
     data = request.json or {}
@@ -466,7 +466,7 @@ def create_affinity_rule(cluster_id=None):
 
 @bp.route('/api/affinity-rules/<rule_id>', methods=['PUT'])
 @bp.route('/api/clusters/<cluster_id>/affinity-rules/<rule_id>', methods=['PUT'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def update_affinity_rule(rule_id, cluster_id=None):
     """Update an affinity rule"""
     data = request.json or {}
@@ -492,7 +492,7 @@ def update_affinity_rule(rule_id, cluster_id=None):
 
 @bp.route('/api/affinity-rules/<rule_id>', methods=['DELETE'])
 @bp.route('/api/clusters/<cluster_id>/affinity-rules/<rule_id>', methods=['DELETE'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.audit'])
 def delete_affinity_rule(rule_id, cluster_id=None):
     """Delete an affinity rule"""
     config = load_affinity_rules()

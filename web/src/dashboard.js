@@ -14127,7 +14127,7 @@
                                                 <div className="absolute right-0 top-full mt-2 w-56 bg-proxmox-card border border-proxmox-border rounded-xl shadow-xl z-50 overflow-hidden">
                                                     <div className="p-3 border-b border-proxmox-border">
                                                         <p className="font-medium text-white">{user?.display_name || user?.username}</p>
-                                                        <p className="text-xs text-gray-400">{user?.role === 'admin' ? t('roleAdmin') : user?.role === 'user' ? t('roleUser') : t('roleViewer')}</p>
+                                                        <p className="text-xs text-gray-400">{user?.role === 'admin' ? t('roleAdmin') : user?.role === 'user' ? t('roleUser') : user?.role_name || user?.role || t('roleViewer')}</p>
                                                     </div>
                                                     <div className="py-1">
                                                         <button

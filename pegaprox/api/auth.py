@@ -290,7 +290,7 @@ def oidc_get_public_config():
 
 
 @bp.route('/api/settings/oidc/test', methods=['POST'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.users'])
 def oidc_test_connection():
     """Test OIDC configuration by verifying endpoints are reachable
     

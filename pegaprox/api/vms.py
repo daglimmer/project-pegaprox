@@ -5842,7 +5842,7 @@ def snapshots_overview():
     date_filter = data.get("date")
     filter_limit = data.get("limit", 200)
     filter_cluster = data.get("cluster_id")
-    is_admin = user_data.get('role') == ROLE_ADMIN
+    is_admin = has_permission(user_data, 'admin.settings')
     user_clusters = user_data.get('clusters', [])
 
     cutoff_date = None
@@ -5925,7 +5925,7 @@ def snapshots_overview_delete():
     user_data['username'] = user
     data = request.get_json(silent=True) or {}
     snapshots = data.get('snapshots', [])
-    is_admin = user_data.get('role') == ROLE_ADMIN
+    is_admin = has_permission(user_data, 'admin.settings')
     user_clusters = user_data.get('clusters', [])
     
     deleted_count = 0

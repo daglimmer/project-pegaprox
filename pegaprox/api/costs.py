@@ -230,7 +230,7 @@ def get_one_rate(cluster_id):
 
 
 @bp.route('/api/cost/rates/<cluster_id>', methods=['PUT'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.settings'])
 def upsert_rate(cluster_id):
     """Admin-only — update rates for a cluster (or '__default__' for global)."""
     body = request.get_json(silent=True) or {}
@@ -267,7 +267,7 @@ def upsert_rate(cluster_id):
 
 
 @bp.route('/api/cost/rates/<cluster_id>', methods=['DELETE'])
-@require_auth(roles=[ROLE_ADMIN])
+@require_auth(perms=['admin.settings'])
 def delete_rate(cluster_id):
     """Drop a per-cluster override (defaults take over). __default__ stays."""
     if cluster_id == '__default__':
