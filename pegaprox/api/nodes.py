@@ -1408,7 +1408,6 @@ def log_message(message):
     """write to log file, nothing fancy"""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_entry = f"[{{timestamp}}] {{message}}"
-    # line by line under systemd, not in blocks minutes later
     print(log_entry, flush=True)
     try:
         with open(LOG_FILE, 'a') as f:
@@ -1440,34 +1439,32 @@ def save_processed_vm(vmid):
         f.write(f"{{vmid}}\\n")
 
 def get_current_smbios(vmid):
-    """read smbios from conf file directly - no perl overhead.
-
-    Section-aware: `qm set` on a RUNNING vm writes into the conf's
-    [PENDING] section (applied at the next vm start), so a pending
-    smbios1 line must win over the main-section value. Without this
-    the daemon never sees its own previous stamp and re-writes smbios1
-    on every poll cycle. smbios1 lines inside any OTHER bracketed
-    section (e.g. snapshot sections) are stale snapshots of old config
-    and are ignored.
-    """
+    """read smbios from conf file directly — no perl overhead.
+    t_d5f0225b: pending-section aware — qm set on a RUNNING vm lands in the
+    [PENDING] section until next start; prefer it over the main-section value
+    so the daemon sees its own previous stamp instead of re-writing every
+    30s cycle (245k+ spurious writes observed on cloudnode-02)."""
     try:
         conf_path = f"/etc/pve/qemu-server/{{vmid}}.conf"
         if not os.path.exists(conf_path):
             return None
         main_val = None
         pending_val = None
-        section = 'main'
+        in_pending = False
         with open(conf_path, 'r') as f:
             for line in f:
                 s = line.strip()
+                if s == '[PENDING]':
+                    in_pending = True
+                    continue
                 if s.startswith('[') and s.endswith(']'):
-                    section = 'pending' if s == '[PENDING]' else 'other'
+                    in_pending = False
                     continue
                 if s.startswith('smbios1:'):
                     val = s.split(':', 1)[1].strip()
-                    if section == 'pending':
+                    if in_pending:
                         pending_val = val
-                    elif section == 'main':
+                    else:
                         main_val = val
         return pending_val if pending_val is not None else main_val
     except:
@@ -1485,8 +1482,12 @@ def parse_smbios_string(smbios_str):
     return params
 
 def needs_smbios_update(vmid):
-    """Check if VM needs SMBIOS configuration. Logs nothing: the re-create check runs it
-    for every configured VM on every cycle"""
+    """Check if VM needs SMBIOS configuration.
+
+    t_b427c990: NO logging in here anymore. This function runs for every
+    already-processed VM every 30s cycle (recreate-same-id check), so any
+    log side-effect here becomes the journal spam fixed by this task.
+    """
     smbios_str = get_current_smbios(vmid)
     if not smbios_str:
         return True
@@ -1499,6 +1500,11 @@ def needs_smbios_update(vmid):
     
     if ('manufacturer' in params or 'product' in params or 
         'version' in params or 'serial' in params or 'family' in params):
+        # t_b427c990: previously logged "VM {{vmid}} already has SMBIOS
+        # configuration" here on every call. That fired once per
+        # already-configured VM per 30s cycle (delete+recreate check in the
+        # main loop) -> constant journal spam. Silent now: steady state
+        # produces zero log lines; the loop logs only on state change.
         return False
     
     return True
@@ -1556,7 +1562,7 @@ def cleanup_processed_list(processed):
     return processed
 
 def main():
-    log_message("=== PegaProx SMBIOS Auto-Configurator started ===")
+    log_message("=== PegaProx SMBIOS Auto-Configurator started (pending-aware) ===")
     log_message(f"Config: {{MANUFACTURER}} | {{PRODUCT}} | {{VERSION}} | {{FAMILY}}")
     
     processed = load_processed_vms()
@@ -1572,18 +1578,28 @@ def main():
             current_vms = get_all_vms()
 
             for vmid in current_vms:
+                # t_b427c990: explicit short-circuit order — conf-exists
+                # gate first, then processed-set. An already-processed VM
+                # whose stamp is intact produces ZERO log lines and zero
+                # qm calls; the old elif re-ran the (previously logging)
+                # needs_smbios_update() on every processed VM every cycle.
+                if not check_vm_exists(vmid):
+                    continue
                 if vmid not in processed:
-                    if check_vm_exists(vmid):
-                        if needs_smbios_update(vmid):
-                            log_message(f"Configuring SMBIOS for new VM {{vmid}}")
-                            if set_smbios(vmid):
-                                save_processed_vm(vmid)
-                                processed.add(vmid)
-                        else:
+                    if needs_smbios_update(vmid):
+                        log_message(f"Configuring SMBIOS for new VM {{vmid}}")
+                        if set_smbios(vmid):
                             save_processed_vm(vmid)
                             processed.add(vmid)
-                elif vmid in processed and check_vm_exists(vmid) and needs_smbios_update(vmid):
-                    # VM was deleted + recreated with same ID
+                    else:
+                        save_processed_vm(vmid)
+                        processed.add(vmid)
+                elif needs_smbios_update(vmid):
+                    # VM was deleted + recreated with same ID before the
+                    # ~15-min cleanup sweep could drop it from the
+                    # processed set. needs_smbios_update() returns True
+                    # only when the stamp is genuinely missing/incomplete,
+                    # so this stays silent in steady state.
                     log_message(f"VM {{vmid}} re-created, reconfiguring SMBIOS")
                     set_smbios(vmid)
             

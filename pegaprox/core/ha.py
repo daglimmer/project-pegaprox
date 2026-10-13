@@ -313,6 +313,10 @@ SYNC_TABLES = (
     'suspended_ha_rules',
     # node recoveries an automatic leader left half done (5.6); made on its first write
     'ha_recovery_journal',
+    # SPEC-010/011 multi-role + multi-tenant configuration: shared deployment state,
+    # so a standby serves the same grants/memberships as the active. Upstream absorbed
+    # the tables from our branch but never placed them here (upstream-only suite gap).
+    'user_roles', 'user_tenants',
 )
 LOCAL_TABLES = (
     'sessions', 'audit_log', 'task_users', 'migration_history', 'metrics_history',
